@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Avance de Proyecto Full Stack</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #eef2f5; text-align: center; padding: 40px; margin: 0; }
+        .container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0px 4px 15px rgba(0,0,0,0.1); display: inline-block; width: 450px; }
+        h2 { color: #333; margin-bottom: 20px; }
+        input { padding: 10px; width: 75%; margin: 8px 0; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
+        button { padding: 8px 12px; background: #007bff; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        button:hover { background: #0056b3; }
+        .btn-warning { background: #ffc107; color: black; margin-right: 5px; }
+        .btn-warning:hover { background: #e0a800; }
+        .btn-danger { background: #dc3545; }
+        .btn-danger:hover { background: #bd2130; }
+        ul { list-style: none; padding: 0; text-align: left; margin-top: 20px; }
+        li { background: #f8f9fa; border: 1px solid #ddd; margin: 8px 0; padding: 10px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; }
+        .hidden { display: none; }
+        .status { font-size: 14px; color: #28a745; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- Seccion de LogIn -->
+        <div id="seccionLogin">
+            <h2>Inicio de Sesión</h2>
+            <p>Ingresa para administrar el sistema</p>
+            <input type="text" id="usuario" placeholder="Usuario (ej. admin)"><br>
+            <input type="password" id="password" placeholder="Contraseña (ej. 12345)"><br>
+            <button onclick="iniciarSesion()">Iniciar Sesión</button>
+            <p id="msgError" style="color: red; font-size: 13px;"></p>
+        </div>
+
+        <!-- seccion CRUD -->
+        <div id="seccionApp" class="hidden">
+            <h2>Gestión de Tareas (CRUD)</h2>
+            <p class="status">✓ Autenticado con JWT</p>
+            
+            <input type="text" id="nuevaTarea" placeholder="Escribe una nueva tarea...">
+            <button onclick="agregarTarea()">Guardar</button>
+
+            <h3>Lista (Read):</h3>
+            <ul id="listaTareas"></ul>
+
+            <button onclick="cerrarSesion()" style="background:#6c757d; margin-top:20px; width:100%;">Cerrar Sesión</button>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:3000/api';
+
+        // LogIn
+        async function iniciarSesion() {
+            const usuario = document.getElementById('usuario').value;
+            const password = document.getElementById('password').value;
+            try {
+                const res = await fetch(`${API_URL}/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ usuario, password })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    document.getElementById('seccionLogin').classList.add('hidden');
+                    document.getElementById('seccionApp').classList.remove('hidden');
+                    cargarTareas();
+                } else {
+                    document.getElementById('msgError').innerText = data.error || 'Error de acceso';
+                }
+            } catch (err) {
+                alert('Enciende tu servidor con "node index.js" en la terminal.');
+            }
+        }
+
+        // Leer tareas
+        async function cargarTareas() {
+            const res = await fetch(`${API_URL}/tareas`);
+            const tareas = await res.json();
+            const lista = document.getElementById('listaTareas');
+            lista.innerHTML = '';
+            tareas.forEach(t => {
+                lista.innerHTML += `
+                    <li>
+                        <span>${t.titulo}</span>
+                        <div>
+                            <button class="btn-warning" onclick="editarTarea(${t.id})">Editar</button>
+                            <button class="btn-danger" onclick="eliminarTarea(${t.id})">Borrar</button>
+                        </div>
+                    </li>`;
+            });
+        }
+
+        // Crear tarea
+        async function agregarTarea() {
+            const titulo = document.getElementById('nuevaTarea').value;
+            if (!titulo) return alert('Escribe un texto');
+            await fetch(`${API_URL}/tareas`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ titulo })
+            });
+            document.getElementById('nuevaTarea').value = '';
+            cargarTareas();
+        }
+
+        // Actualizar tarea
+        async function editarTarea(id) {
+            const nuevoTitulo = prompt("Modifica el título de la tarea:");
+            if (!nuevoTitulo) return;
+            await fetch(`${API_URL}/tareas/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ titulo: nuevoTitulo })
+            });
+            cargarTareas();
+        }
+
+        //  Borrar tarea
+        async function eliminarTarea(id) {
+            await fetch(`${API_URL}/tareas/${id}`, { method: 'DELETE' });
+            cargarTareas();
+        }
+
+        function cerrarSesion() {
+            document.getElementById('seccionApp').classList.add('hidden');
+            document.getElementById('seccionLogin').classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
